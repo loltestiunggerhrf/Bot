@@ -1,39 +1,41 @@
 const express = require("express");
 const axios = require("axios");
 const app = express();
+
 app.use(express.json());
 
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const CHANNEL_ID = process.env.CHANNEL_ID;
+const TOKEN = process.env.DISCORD_TOKEN;
+const CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 
-app.post("/update", async (req, res) => {
-  const { executions } = req.body;
+app.post("/track", async (req, res) => {
+  const { username, executions } = req.body;
 
-  if (!executions) return res.status(400).send("Missing 'executions'");
+  if (!username || !executions) {
+    return res.status(400).send("Missing data");
+  }
 
-  const formatted = (executions / 1000000).toFixed(2) + "m";
-  const newName = `execution-${formatted}`;
+  const msg = `User: ${username} has executed the script (${executions.toLocaleString()}). Enjoy!`;
 
   try {
-    await axios.patch(`https://discord.com/api/v10/channels/${CHANNEL_ID}`, {
-      name: newName
+    await axios.post(`https://discord.com/api/v10/channels/${CHANNEL_ID}/messages`, {
+      content: msg
     }, {
       headers: {
-        Authorization: `Bot ${DISCORD_TOKEN}`,
+        Authorization: `Bot ${TOKEN}`,
         "Content-Type": "application/json"
       }
     });
 
-    res.send("Channel name updated!");
-  } catch (error) {
-    console.error(error.response?.data || error.message);
-    res.status(500).send("Failed to update channel.");
+    res.send("Message sent to Discord.");
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).send("Failed to send message.");
   }
 });
 
 app.get("/", (req, res) => {
-  res.send("Execution bot is running.");
+  res.send("API is running.");
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server running on port", PORT));
+app.listen(PORT, () => console.log("Server started on port", PORT));
